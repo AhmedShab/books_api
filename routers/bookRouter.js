@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 const express = require('express');
 
 
@@ -24,15 +25,55 @@ function routes(Book) {
       });
     });
 
+  bookRouter.use('/books/:bookId', (req, res, next) => {
+    Book.findById(req.params.bookId, (error, book) => {
+      if (error) {
+        return res.send(error);
+      }
+      if (book) {
+        req.book = book;
+        return next();
+      }
+      return res.sendStatus(404);
+    });
+  });
+
   bookRouter.route('/books/:bookId')
-    .get((req, res) => {
-      Book.findById(req.params.bookId, (error, books) => {
-        if (error) {
-          return res.send(error);
+    .get((req, res) => res.send(req.book))
+    .put((req, res) => {
+      const { book } = req;
+      book.title = req.body.title;
+      book.author = req.body.author;
+      book.genre = req.body.genre;
+      book.read = req.body.read;
+      req.book.save((err) => {
+        if (err) {
+          return res.send(err);
         }
-        return res.json(books);
+        return res.send(book);
+      });
+    })
+    .patch((req, res) => {
+      const { book } = req;
+
+      // eslint-disable-next-line no-underscore-dangle
+      if (req.body._id) {
+        // eslint-disable-next-line no-underscore-dangle
+        delete req.body._id;
+      }
+      Object.entries(req.body).forEach((item) => {
+        const key = item[0];
+        const value = item[1];
+        book[key] = value;
+      });
+      req.book.save((err) => {
+        if (err) {
+          return res.send(err);
+        }
+        return res.send(book);
       });
     });
+
   return bookRouter;
 }
 
